@@ -8,7 +8,7 @@ The gem runs a Java-based OpenHTMLtoPDF runner internally. The runner JAR is pac
 
 - Convert HTML strings to PDF
 - Convert HTML files to PDF
-- Embedded fonts (Myriad Pro family)
+- Bundled open-licence TrueType fonts for `@font-face`
 - PDF/UA accessibility mode through the OpenHTMLtoPDF Java renderer
 - Designed for Ruby on Rails applications
 
@@ -104,11 +104,16 @@ send_file pdf_path,
 
 ## Fonts
 
-The runner embeds the Myriad Pro family and registers it as the font family `MyriadPro` with weights 300 (light), 400 (regular), 600 (semibold) and 700 (bold):
+The runner registers no fonts of its own; it embeds the fonts the HTML declares with `@font-face`. The gem ships open-licence TrueType fonts in `OpenHtmlToPdf.fonts_dir` (see `lib/openhtmltopdf/fonts/README.md`):
 
 ```css
+@font-face {
+  font-family: "Noto Sans";
+  src: url("file:///path/to/fonts/NotoSans-Regular.ttf");
+}
+
 body {
-  font-family: MyriadPro;
+  font-family: "Noto Sans";
 }
 ```
 
@@ -163,8 +168,7 @@ openhtmltopdf/
 ├── java/                       # Java runner (Maven project)
 │   ├── pom.xml
 │   └── src/main/
-│       ├── java/com/cureus/openhtmltopdf/PdfRenderer.java
-│       └── resources/fonts/    # Myriad Pro font files
+│       └── java/com/cureus/openhtmltopdf/PdfRenderer.java
 ├── lib/
 │   ├── openhtmltopdf.rb        # Public API
 │   └── openhtmltopdf/

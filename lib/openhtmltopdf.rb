@@ -15,7 +15,7 @@ module OpenHtmlToPdf
   FONTS_DIR = File.expand_path("openhtmltopdf/fonts", __dir__)
 
   # TrueType fonts for @font-face rules (see fonts/README.md). The renderer embeds only TrueType,
-  # and only fonts it is given; Myriad Pro is registered by the Java runner itself.
+  # and only fonts it is given; the Java runner registers none of its own.
   def self.fonts_dir
     FONTS_DIR
   end
