@@ -35,11 +35,13 @@ module OpenHtmlToPdf
   #   OpenHtmlToPdf.render("<h1>Hi</h1>", output: "hi.pdf")
   #
   # base_url: directory or URL used to resolve relative links, images and CSS.
-  def self.render(html, output:, base_url: nil)
+  # compress: false writes the PDF uncompressed (bigger, but some upload firewalls reject compressed PDFs).
+  def self.render(html, output:, base_url: nil, compress: true)
     Renderer.new(java_jar: java_jar).render(
       html: html,
       output: output,
-      base_url: base_url
+      base_url: base_url,
+      compress: compress
     )
   end
 

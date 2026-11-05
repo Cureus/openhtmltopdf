@@ -10,7 +10,8 @@ module OpenHtmlToPdf
       @java_jar = File.expand_path(java_jar)
     end
 
-    def render(html:, output:, base_url: nil)
+    # compress: false writes the PDF with its streams uncompressed, for upload firewalls that reject compressed PDFs
+    def render(html:, output:, base_url: nil, compress: true)
       raise ArgumentError, "HTML cannot be empty" if html.to_s.strip.empty?
 
       output = File.expand_path(output)
@@ -25,6 +26,7 @@ module OpenHtmlToPdf
 
         command = ["java", "-jar", @java_jar, html_file.path, output]
         command << resolve_base_url(base_url) if base_url
+        command << "--no-compression" unless compress
 
         stdout, stderr, status = run(command)
 

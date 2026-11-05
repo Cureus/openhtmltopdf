@@ -53,6 +53,25 @@ RSpec.describe OpenHtmlToPdf do
       end
     end
 
+    it "writes the same PDF uncompressed with compress: false" do
+      Dir.mktmpdir do |dir|
+        # PDF/UA can't use the renderer's built-in fonts, so the text needs the runner's Myriad Pro
+        html = "<html><body style=\"font-family: MyriadPro\"><h1>Hello</h1><p>World</p></body></html>"
+        compressed = File.join(dir, "compressed.pdf")
+        uncompressed = File.join(dir, "uncompressed.pdf")
+
+        OpenHtmlToPdf.render(html, output: compressed)
+        OpenHtmlToPdf.render(html, output: uncompressed, compress: false)
+
+        expect(File.binread(compressed)).to include("/FlateDecode")
+        expect(File.binread(uncompressed)).to start_with("%PDF-")
+        expect(File.binread(uncompressed)).not_to include("/FlateDecode")
+        expect(File.binread(uncompressed)).not_to include("/ObjStm")
+        # The page's drawing operators are readable once the content stream isn't compressed
+        expect(File.binread(uncompressed)).to match(/\bBT\b.*\bET\b/m)
+      end
+    end
+
     it "raises OpenHtmlToPdf::Error when the runner fails" do
       Dir.mktmpdir do |dir|
         bad = OpenHtmlToPdf::Renderer.new(java_jar: File.join(dir, "missing.jar"))

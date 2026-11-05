@@ -2,12 +2,25 @@ package com.cureus.openhtmltopdf;
 
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.cos.COSArray;
+import org.apache.pdfbox.cos.COSBase;
+import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSObjectKey;
+import org.apache.pdfbox.cos.COSStream;
+import org.apache.pdfbox.pdfwriter.compress.CompressParameters;
+import org.apache.pdfbox.pdmodel.PDDocument;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PdfRenderer {
 
@@ -25,11 +38,29 @@ public class PdfRenderer {
     private static final String BOLD_FONT =
         "/fonts/myriadprobold.ttf";
 
-    public static void main(String[] args) throws Exception {
+    private static final String NO_COMPRESSION_FLAG =
+        "--no-compression";
+
+    public static void main(String[] commandLine) throws Exception {
+
+        // Some upload firewalls (Turnitin's) reject compressed PDFs;
+        // --no-compression writes the same PDF with its streams uncompressed.
+        boolean noCompression = false;
+        List<String> positional = new ArrayList<>();
+
+        for (String arg : commandLine) {
+            if (arg.equals(NO_COMPRESSION_FLAG)) {
+                noCompression = true;
+            } else {
+                positional.add(arg);
+            }
+        }
+
+        String[] args = positional.toArray(new String[0]);
 
         if (args.length != 2 && args.length != 3) {
             System.err.println(
-                "Usage: PdfRenderer <input.html> <output.pdf> [base-uri]"
+                "Usage: PdfRenderer <input.html> <output.pdf> [base-uri] [--no-compression]"
             );
             System.exit(1);
         }
@@ -119,9 +150,11 @@ public class PdfRenderer {
             boldFont.getAbsolutePath()
         );
 
+        ByteArrayOutputStream rendered =
+            new ByteArrayOutputStream();
+
         try (
-            OutputStream outputStream =
-                new FileOutputStream(outputFile)
+            OutputStream outputStream = rendered
         ) {
 
             PdfRendererBuilder builder =
@@ -172,9 +205,86 @@ public class PdfRenderer {
             builder.run();
         }
 
+        try (
+            OutputStream outputStream =
+                new FileOutputStream(outputFile)
+        ) {
+            if (noCompression) {
+                writeUncompressed(
+                    rendered.toByteArray(),
+                    outputStream
+                );
+            } else {
+                rendered.writeTo(outputStream);
+            }
+        }
+
         System.out.println(
             "PDF generated successfully."
         );
+    }
+
+    // Like wkhtmltopdf's --no-pdf-compression: every Flate stream is stored
+    // decoded and there are no object streams. JPEG (DCT) images stay as they are.
+    private static void writeUncompressed(
+        byte[] pdf,
+        OutputStream outputStream
+    ) throws Exception {
+
+        try (PDDocument document = Loader.loadPDF(pdf)) {
+
+            for (COSObjectKey key :
+                    new ArrayList<>(document.getDocument().getXrefTable().keySet())) {
+
+                COSBase object =
+                    document.getDocument().getObjectFromPool(key).getObject();
+
+                if (object instanceof COSStream) {
+                    decodeFlate((COSStream) object);
+                }
+            }
+
+            // The trailer comes from the compressed file's cross-reference
+            // stream; a plain trailer has none of that stream's keys
+            COSDictionary trailer = document.getDocument().getTrailer();
+
+            for (COSName key : new COSName[] {
+                    COSName.TYPE, COSName.FILTER, COSName.DECODE_PARMS,
+                    COSName.LENGTH, COSName.W, COSName.INDEX, COSName.PREV }) {
+                trailer.removeItem(key);
+            }
+
+            document.save(
+                outputStream,
+                CompressParameters.NO_COMPRESSION
+            );
+        }
+    }
+
+    private static void decodeFlate(COSStream stream) throws Exception {
+
+        COSBase filters = stream.getFilters();
+
+        if (filters instanceof COSArray && ((COSArray) filters).size() == 1) {
+            filters = ((COSArray) filters).getObject(0);
+        }
+
+        if (!COSName.FLATE_DECODE.equals(filters)) {
+            return;
+        }
+
+        byte[] decoded;
+
+        try (InputStream input = stream.createInputStream()) {
+            decoded = input.readAllBytes();
+        }
+
+        stream.removeItem(COSName.FILTER);
+        stream.removeItem(COSName.DECODE_PARMS);
+
+        try (OutputStream output = stream.createRawOutputStream()) {
+            output.write(decoded);
+        }
     }
 
     private static File extractFont(String resource)
