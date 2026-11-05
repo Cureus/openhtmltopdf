@@ -10,8 +10,7 @@ html = <<~HTML
     <title>Accessibility Test</title>
     <style>
       @page { size: A4; margin: 40pt; }
-      @font-face { font-family: "Noto Sans"; src: url("file://#{OpenHtmlToPdf.fonts_dir}/NotoSans-Regular.ttf"); }
-      body { font-family: "Noto Sans"; font-size: 16pt; }
+      body { font-family: MyriadPro; font-size: 16pt; }
       h1 { font-size: 24pt; }
       h2 { font-size: 20pt; }
     </style>

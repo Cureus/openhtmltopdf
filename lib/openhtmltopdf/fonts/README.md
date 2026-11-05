@@ -6,6 +6,7 @@ The renderer can't use OpenType/CFF or variable fonts, so variable fonts were cu
 instances with fontTools `varLib.instancer`.
 The Latin fonts have their ligature tables (GSUB) removed: the PDF can't map a ligature glyph such as
 "fi" back to text, which PDF/UA requires. Each file's name table names its own weight.
+Myriad Pro is registered by the Java runner (java/src/main/resources/fonts).
 
 | File | Source | Licence |
 | --- | --- | --- |
