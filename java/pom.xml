@@ -35,35 +35,48 @@
         <version>3.13.0</version>
       </plugin>
 
+      <!-- Builds the runner JAR with its dependencies. Shade (not assembly) so the patched
+           com.openhtmltopdf.render.ListItemPainter in src/ replaces openhtmltopdf-core's copy. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>3.7.1</version>
-
-        <configuration>
-          <archive>
-            <manifest>
-              <mainClass>
-                com.cureus.openhtmltopdf.PdfRenderer
-              </mainClass>
-            </manifest>
-          </archive>
-
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-        </configuration>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.0</version>
 
         <executions>
           <execution>
-            <id>make-assembly</id>
             <phase>package</phase>
             <goals>
-              <goal>single</goal>
+              <goal>shade</goal>
             </goals>
+            <configuration>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <filters>
+                <filter>
+                  <artifact>io.github.openhtmltopdf:openhtmltopdf-core</artifact>
+                  <excludes>
+                    <exclude>com/openhtmltopdf/render/ListItemPainter.class</exclude>
+                  </excludes>
+                </filter>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.cureus.openhtmltopdf.PdfRenderer</mainClass>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+            </configuration>
           </execution>
         </executions>
-
       </plugin>
 
     </plugins>
